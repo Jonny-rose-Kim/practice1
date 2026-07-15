@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>CNN Convolution Animation</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px;
+    }
+
+    h1 { color: #333; margin-bottom: 40px; }
+
+    /* 전체 컨테이너 정렬 */
+    .cnn-container {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .matrix-title {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #555;
+    }
+
+    /* 그리드 공통 스타일 */
+    .grid {
+      display: grid;
+      gap: 2px;
+      background: #ccc;
+      border: 2px solid #999;
+      position: relative;
+    }
+
+    .grid div.cell {
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 40px;
+      height: 40px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    /* 각 행렬의 열 개수 설정 */
+    .input-matrix { grid-template-columns: repeat(5, 40px); }
+    .kernel-matrix { grid-template-columns: repeat(3, 40px); }
+    .output-matrix { grid-template-columns: repeat(3, 40px); }
+
+    .kernel-matrix div.cell { background: #e8f5e9; } /* 커널 색상 지정 */
+
+    /* 기호 (곱하기, 는) */
+    .operator {
+      font-size: 32px;
+      font-weight: bold;
+      color: #777;
+    }
+
+    /* 1. 슬라이딩 윈도우 (입력 위를 움직이는 파란색 상자) */
+    .sliding-window {
+      position: absolute;
+      top: 0; left: 0;
+      /* 셀 3개 너비(40*3) + 갭 2개(2*2) = 124px */
+      width: 124px; 
+      height: 124px;
+      background: rgba(33, 150, 243, 0.3);
+      border: 3px solid #2196F3;
+      box-sizing: border-box;
+      z-index: 10;
+      /* 9초 동안 9단계를 거치도록 애니메이션 설정 */
+      animation: slide 9s infinite;
+    }
+
+    /* 슬라이딩 윈도우 이동 경로 (42px = 셀40px + 갭2px) */
+    @keyframes slide {
+      0%, 10.99%   { transform: translate(0px, 0px); }
+      11.11%, 22.1% { transform: translate(42px, 0px); }
+      22.22%, 33.2% { transform: translate(84px, 0px); }
+      
+      33.33%, 44.3% { transform: translate(0px, 42px); }
+      44.44%, 55.4% { transform: translate(42px, 42px); }
+      55.55%, 66.5% { transform: translate(84px, 42px); }
+      
+      66.66%, 77.6% { transform: translate(0px, 84px); }
+      77.77%, 88.7% { transform: translate(42px, 84px); }
+      88.88%, 99.9% { transform: translate(84px, 84px); }
+      100%          { transform: translate(0px, 0px); }
+    }
+
+    /* 2. 출력 행렬 셀 강조 애니메이션 */
+    .out-cell {
+      animation: highlightOut 9s infinite;
+      position: relative;
+    }
+
+    /* 9초 주기 중 1초(약 11.11%) 동안만 강조됨 */
+    @keyframes highlightOut {
+      0% { 
+        background-color: #ff9800 !important; 
+        color: white !important; 
+        transform: scale(1.1); 
+        z-index: 5;
+        box-shadow: 0 0 10px rgba(255,152,0,0.6);
+      }
+      11.11%, 100% { 
+        background-color: #fff !important; 
+        color: #333 !important; 
+        transform: scale(1); 
+        z-index: 1;
+        box-shadow: none;
+      }
+    }
+
+    /* 각 출력 셀마다 애니메이션 시작 시간을 1초씩 지연시켜 순서대로 켜지게 함 */
+    .out-cell:nth-child(1) { animation-delay: 0s; }
+    .out-cell:nth-child(2) { animation-delay: 1s; }
+    .out-cell:nth-child(3) { animation-delay: 2s; }
+    .out-cell:nth-child(4) { animation-delay: 3s; }
+    .out-cell:nth-child(5) { animation-delay: 4s; }
+    .out-cell:nth-child(6) { animation-delay: 5s; }
+    .out-cell:nth-child(7) { animation-delay: 6s; }
+    .out-cell:nth-child(8) { animation-delay: 7s; }
+    .out-cell:nth-child(9) { animation-delay: 8s; }
+
+  </style>
+</head>
+<body>
+
+  <h1>CNN 합성곱(Convolution) 시각화</h1>
+
+  <div class="cnn-container">
+    
+    <!-- 1. 입력 이미지 (5x5) -->
+    <div>
+      <div class="matrix-title">Input (5x5)</div>
+      <div class="grid input-matrix">
+        <!-- 슬라이딩하는 커널 영역 -->
+        <div class="sliding-window"></div>
+        
+        <!-- 25개의 입력 픽셀(임의의 값) -->
+        <div class="cell">1</div><div class="cell">1</div><div class="cell">1</div><div class="cell">0</div><div class="cell">0</div>
+        <div class="cell">0</div><div class="cell">1</div><div class="cell">1</div><div class="cell">1</div><div class="cell">0</div>
+        <div class="cell">0</div><div class="cell">0</div><div class="cell">1</div><div class="cell">1</div><div class="cell">1</div>
+        <div class="cell">0</div><div class="cell">0</div><div class="cell">1</div><div class="cell">1</div><div class="cell">0</div>
+        <div class="cell">0</div><div class="cell">1</div><div class="cell">1</div><div class="cell">0</div><div class="cell">0</div>
+      </div>
+    </div>
+
+    <div class="operator">★</div>
+
+    <!-- 2. 필터/커널 (3x3) -->
+    <div>
+      <div class="matrix-title">Kernel (3x3)</div>
+      <div class="grid kernel-matrix">
+        <div class="cell">1</div><div class="cell">0</div><div class="cell">1</div>
+        <div class="cell">0</div><div class="cell">1</div><div class="cell">0</div>
+        <div class="cell">1</div><div class="cell">0</div><div class="cell">1</div>
+      </div>
+    </div>
+
+    <div class="operator">=</div>
+
+    <!-- 3. 출력 특징 맵 (3x3) -->
+    <div>
+      <div class="matrix-title">Feature Map (3x3)</div>
+      <div class="grid output-matrix">
+        <!-- 9개의 출력 픽셀 (애니메이션 클래스 적용) -->
+        <div class="cell out-cell">4</div>
+        <div class="cell out-cell">3</div>
+        <div class="cell out-cell">4</div>
+        <div class="cell out-cell">2</div>
+        <div class="cell out-cell">4</div>
+        <div class="cell out-cell">3</div>
+        <div class="cell out-cell">2</div>
+        <div class="cell out-cell">3</div>
+        <div class="cell out-cell">4</div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
